@@ -1,0 +1,39 @@
+mipsbe:
+  - stat() results are completely wrong. endian issue.
+
+general:
+  execute / shell is broken. seems to break when requesting a channel / 
+  interactive. If execute -f /bin/sleep -a 60 -> it works fine.
+
+  that code should probably be rewritten from scratch using a structure
+  and anonymous functions to make it less if then / else if / etc 
+  spagetti.  
+
+  -- 
+
+  Phdr p_align being 2**21 on x86_64 and 2**16 on mipsbe leads to a lot of
+  wasted memory... perhaps there is a better way to allocate than single big
+  blobs, or perhaps it's possible to coerce gcc/ld to do 2**12 alignment
+  (or whatever is applicable) to reduce the amount of holes in the
+  allocations.
+
+  -- 
+
+  ThreadSanitizer / MemorySanitizer / etc support would be good.
+
+  Perhaps moving to http://ellcc.org might be worthwhile?
+
+  Doesn't support address sanitizer :(
+
+  --
+
+  Verify the main thread code is reset during starting the newly
+  loaded musl libc entry point code, otherwise work out how to fix
+  that in stage3.
+
+  --
+
+  GetLastError() uses a macro and global variable per .o of local_error,
+  this needs to be fixed because it's racy, and incorrect in general :>
+
+
