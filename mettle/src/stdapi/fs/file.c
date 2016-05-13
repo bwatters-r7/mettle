@@ -13,6 +13,7 @@
 #include <dnet.h>
 #include <mettle.h>
 
+#include "../../channel.h"
 #include "log.h"
 #include "tlv.h"
 
@@ -297,4 +298,52 @@ struct tlv_packet *fs_chdir(struct tlv_handler_ctx *ctx)
 		rc = errno;
 	}
 	return tlv_packet_response_result(ctx, rc);
+}
+
+
+
+
+/*
+ * file channel stuff
+ *
+ */
+
+int fs_file_initialize(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+{
+	log_debug("setting up fs_file channel...");
+	char* temp_path = tlv_packet_get_str(ctx->req, TLV_TYPE_FILE_PATH);
+	uint32_t buf_size = strlen(temp_path)+1; //remember the null
+	channel->path=calloc(buf_size, sizeof(char));
+	strncpy(channel->path, temp_path, buf_size);
+	log_debug("path in channel = %s", channel->path);
+	log_debug("path in packet = %s", temp_path);
+	return 0;
+
+}
+
+struct tlv_packet * fs_file_interact(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+{
+	log_debug("in fs_file_open");
+	return tlv_packet_response_result(ctx, TLV_RESULT_SUCCESS);;
+}
+
+struct tlv_packet * fs_file_close(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+{
+	log_debug("in fs_file_close");
+	return tlv_packet_response_result(ctx, TLV_RESULT_SUCCESS);;
+
+}
+
+struct tlv_packet * fs_file_read(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+{
+	log_debug("in fs_file_read");
+	return tlv_packet_response_result(ctx, TLV_RESULT_SUCCESS);;
+
+}
+
+struct tlv_packet * fs_file_write(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+{
+	log_debug("in fs_file_write");
+	return tlv_packet_response_result(ctx, TLV_RESULT_SUCCESS);;
+
 }

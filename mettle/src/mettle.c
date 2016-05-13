@@ -11,6 +11,7 @@
 #include <sigar.h>
 #include <uv.h>
 
+#include "channel.h"
 #include "log.h"
 #include "network_client.h"
 #include "mettle.h"
@@ -19,6 +20,9 @@
 struct mettle {
 	struct network_client *nc;
 	struct tlv_dispatcher *td;
+	struct channel_dispatcher_entry *cd;
+	struct channel_map_entry *ct;
+	struct open_channel_entry *ci;
 
 	sigar_t *sigar;
 	char fqdn[SIGAR_MAXDOMAINNAMELEN];
@@ -62,6 +66,21 @@ const char *mettle_get_fqdn(struct mettle *m)
 struct tlv_dispatcher *mettle_get_tlv_dispatcher(struct mettle *m)
 {
 	return m->td;
+}
+
+struct channel_dispatcher_entry *mettle_get_channel_dispatcher(struct mettle *m)
+{
+	return m->cd;
+}
+
+struct channel_map_entry *mettle_get_channel_types(struct mettle *m)
+{
+	return m->ct;
+}
+
+struct open_channel_entry *mettle_get_channel_instances(struct mettle *m)
+{
+	return m->ci;
 }
 
 sigar_t *mettle_get_sigar(struct mettle *m)
@@ -131,8 +150,20 @@ struct mettle *mettle(void)
 		goto err;
 	}
 
+
+	m->td = tlv_dispatcher_new(on_tlv_response, m);
+	if (m->td == NULL) {
+		goto err;
+	}
+
+	m->cd = NULL;
+	m->ci = NULL;
+	m->ct = NULL;
+
+
 	tlv_register_coreapi(m, m->td);
 	tlv_register_stdapi(m, m->td);
+	tlv_register_default_channel_dispatchers(m, &(m->cd));
 
 	return m;
 
