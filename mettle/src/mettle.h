@@ -30,7 +30,7 @@ int mettle_add_tcp_sock(struct mettle *m, int fd);
 
 struct channel_map_entry *mettle_get_channel_types(struct mettle *m);
 
-struct open_channel_entry *mettle_get_channel_instances(struct mettle *m);
+struct open_channel_entry **mettle_get_channel_instances(struct mettle *m);
 
 struct channel_dispatcher_entry *mettle_get_channel_dispatcher(struct mettle *m);
 

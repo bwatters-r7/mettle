@@ -78,9 +78,9 @@ struct channel_map_entry *mettle_get_channel_types(struct mettle *m)
 	return m->ct;
 }
 
-struct open_channel_entry *mettle_get_channel_instances(struct mettle *m)
+struct open_channel_entry **mettle_get_channel_instances(struct mettle *m)
 {
-	return m->ci;
+	return &(m->ci);
 }
 
 sigar_t *mettle_get_sigar(struct mettle *m)

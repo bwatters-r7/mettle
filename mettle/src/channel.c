@@ -4,46 +4,6 @@
 #include "log.h"
 #include "uthash.h"
 
-/*
- * the defines here go with the channel_table structure;
- * hopefully, we will move away form a string type in the
- * tlv_packet, so this bridges the gap as it were.
- * when framework implements numeric type codes, this will
- * require minimal changes.
- *
- * if you add another STDAPI type, it must be #defined and
- * entered into the dispatch table.
- */
-#define STDAPI_FS_FILE 			1
-#define STDAPI_NET_TCP_CLIENT 	2
-#define STDAPI_NET_TCP_SERVER 	3
-#define STDAPI_NET_UDP_CLIENT	4
-
-/*
- * the following struct pointers are entry points for UT hash objects.
- * registered_types
- * contains a mapping of string types used by framework to numeric
- * types used by mettle.
- * populated/queried by get_numeric_channel_type
- * queried by get_str_channel_type
- * depopulated by delete_channel_type
- *
- * dispatch_table
- * contains a mapping of numeric channel types to handler functions
- * populated by register_channel_type
- * depopulated by deregister_channel_type
- *
- * open_channels
- * contains the currently open channels
- * populated by add_chanel
- * depopulated by remove_channel
- *
- */
-
-/* either send back the numeric type value associated with a string value
- * or register it and send the new value back.
- */
-
 int tlv_register_default_channel_dispatchers(struct mettle *m,
 		struct channel_dispatcher_entry **dispatch_table)
 {
@@ -87,14 +47,6 @@ int tlv_register_channel_dispatcher(struct mettle *m,
 		channel_handler channel_interact,
 		channel_handler channel_close)
 {
-	/*
-	 * this should be relocated to startup, but I'm not sure where that is.
-	 */
-//	if (channel_dispatch_table == NULL)
-//		register_default_dispatch_routines();
-	/*
-	 * check to see if that type has already been registered
-	 */
 	struct channel_dispatcher_entry* entry;
 	HASH_FIND_INT(*dispatch_table, &int_type, entry);
 	if (entry != NULL){
@@ -110,23 +62,29 @@ int tlv_register_channel_dispatcher(struct mettle *m,
 		entry->interact = channel_interact;
 		entry->close = channel_close;
 		HASH_ADD_INT(*dispatch_table, int_type, entry);
-		log_debug("channel %u inserted into open_channels", entry->int_type);
+		log_debug("type %u registered in dispatch table", entry->int_type);
 		return 1;
 	}
 }
 
 uint32_t get_int_channel_type(struct mettle *m, const char* str_type)
 {
+	log_debug("in get_int_channel_type");
 	struct channel_map_entry *type_table = mettle_get_channel_types(m);
 	struct channel_map_entry *type_entry;
+	log_debug("mettle address = %p", m);
+	log_debug("type table address = %p", type_table);
 	for(type_entry = type_table; type_entry != NULL; type_entry = type_entry->hh.next){
-		if (!strcmp(str_type, type_entry->str_type))
-			return type_entry->int_type;
+		if (!strcmp(str_type, type_entry->str_type)){
+			log_debug("found entry for type %s:%u", type_entry->str_type, type_entry->int_type);
+					return type_entry->int_type;
+		}
 	}
 	/*
 	 * could not find the type; place it in the hash table
 	 * create the entry first, then add it.
 	 */
+	log_debug("no entry for type %s", str_type);
 	struct channel_map_entry* new_entry = calloc(1, sizeof(struct channel_map_entry));
 	uint32_t str_len = strlen(str_type)+1;
 	new_entry->str_type = calloc(str_len, sizeof(char));
@@ -136,7 +94,7 @@ uint32_t get_int_channel_type(struct mettle *m, const char* str_type)
 		if (type_entry == NULL){
 			new_entry->int_type = i;
 			HASH_ADD_INT(type_table, int_type, new_entry);
-			log_debug("type %d inserted into channel_type_map", new_entry->int_type);
+			log_debug("added entry for type %s:%u", new_entry->str_type, new_entry->int_type);
 			break;
 		}
 	}
@@ -151,20 +109,20 @@ int add_channel(struct mettle *m, struct open_channel_entry* channel_in)
 	 * until then, we start looking for open spots at 1
 	 * rather than 0
 	 */
-	struct open_channel_entry *channel_table = mettle_get_channel_instances(m);
+	struct open_channel_entry **channel_table = mettle_get_channel_instances(m);
 	log_debug("mettle location = %p", m);
-	log_debug("channel_table location = %p", channel_table);
+	log_debug("channel_table location = %p", *channel_table);
 	struct open_channel_entry *channel_entry;
 	log_debug("here");
 	for(uint32_t i = 1; i <= INT_MAX; i++){
-		HASH_FIND_INT(channel_table, &i, channel_entry);
+		HASH_FIND_INT(*channel_table, &i, channel_entry);
 		if (channel_entry == NULL){
 			channel_in->channel_id = i;
-			HASH_ADD_INT(channel_table, channel_id, channel_in);
-			log_debug("channel_table location = %p", channel_table);
+			HASH_ADD_INT(*channel_table, channel_id, channel_in);
+			log_debug("channel_table location = %p", *channel_table);
 			log_debug("channel %d inserted into open_channels", channel_in->channel_id);
 			struct open_channel_entry *test_entry;
-			HASH_FIND_INT(channel_table, &channel_in->channel_id, test_entry);
+			HASH_FIND_INT(*channel_table, &channel_in->channel_id, test_entry);
 			if (test_entry!=NULL)
 				log_debug("channel %d inserted into open_channels", test_entry->channel_id);
 			else
@@ -177,10 +135,13 @@ int add_channel(struct mettle *m, struct open_channel_entry* channel_in)
 
 int get_channel_id(struct open_channel_entry* channel, uint32_t *channel_id)
 {
+	log_debug("in get_channel_id");
 	if (channel != NULL){
 		*channel_id = channel->channel_id;
+		log_debug("found channel with channel_id = %u", *channel_id);
 		return 0;
 	}else{
+		log_debug("no channel found with channel_id = %u", *channel_id);
 		return -1;
 	}
 }
@@ -294,18 +255,20 @@ struct open_channel_entry* get_open_channel(struct tlv_handler_ctx *ctx, uint32_
 {
 	struct mettle *m = ctx->arg;
 	log_debug("mettle location = %p", m);
-	struct open_channel_entry *channel_table = mettle_get_channel_instances(m);
-	log_debug("channel_table location = %p", channel_table);
+	struct open_channel_entry **channel_table = mettle_get_channel_instances(m);
+	log_debug("channel_table location = %p", *channel_table);
 	struct open_channel_entry *channel_entry;
 	log_debug("here");
-	HASH_FIND_INT(channel_table, &channel_id, channel_entry);
+	HASH_FIND_INT(*channel_table, &channel_id, channel_entry);
 	return channel_entry;
 }
 struct channel_dispatcher_entry* get_dispatch_data(struct tlv_handler_ctx *ctx,
 		struct open_channel_entry *channel)
 {
 	struct mettle *m = ctx->arg;
+	log_debug("mettle address = %p", m);
 	struct channel_dispatcher_entry *dispatch_table = mettle_get_channel_dispatcher(m);
+	log_debug("dispatch table address = %p", dispatch_table);
 	struct channel_dispatcher_entry *dispatcher_entry;
 	HASH_FIND_INT(dispatch_table, &channel->int_type, dispatcher_entry);
 	return dispatcher_entry;
@@ -359,14 +322,14 @@ int remove_channel(struct tlv_handler_ctx *ctx, struct open_channel_entry* chann
 {
 	//free the calloc'd data, too!
 	struct mettle *m = ctx->arg;
-	struct open_channel_entry *channel_table = mettle_get_channel_instances(m);
+	struct open_channel_entry **channel_table = mettle_get_channel_instances(m);
 	struct open_channel_entry *delete_channel;
-	HASH_FIND_INT(channel_table, &channel->channel_id, delete_channel);
+	HASH_FIND_INT(*channel_table, &channel->channel_id, delete_channel);
 	if (delete_channel == NULL){
 		log_debug("no channel with channel_id %d found", channel->channel_id);
 		return -1;
 	}
-	HASH_DEL(channel_table, channel);
+	HASH_DEL(*channel_table, channel);
 	free(channel);
 	log_debug("channel deleted");
 	return 0;
