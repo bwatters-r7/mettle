@@ -20,7 +20,6 @@ struct channel_handlers{
 };
 
 struct channel_type_entry{
-//	uint32_t					hash_hey;
 	char* 						str_type;
 	struct channel_handlers*	handlers;
 	UT_hash_handle 				hh;
@@ -30,7 +29,7 @@ struct open_channel_entry{
 	uint32_t 					channel_id;
 	void*						data;
 	uint32_t 					flags;
-	struct channel_handlers*	handlers;
+	struct channel_type_entry*	type;
 	UT_hash_handle 				hh;
 	char* 						path;
 	char						state;
@@ -66,4 +65,6 @@ int channel_type_initialize(struct tlv_handler_ctx *ctx, struct open_channel_ent
 struct tlv_packet* channel_type_read(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel);
 struct tlv_packet* channel_type_write(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel);
 struct channel_handlers* get_channel_handlers(struct mettle *m, const char* str_type);
-
+struct channel_type_entry* get_channel_type_entry(struct mettle *m, const char* str_type);
+void set_channel_flags(struct tlv_handler_ctx *ctx, struct open_channel_entry* channel);
+char* set_channel_type(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel);
