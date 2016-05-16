@@ -20,8 +20,8 @@
 struct mettle {
 	struct network_client *nc;
 	struct tlv_dispatcher *td;
-	struct channel_dispatcher_entry *cd;
-	struct channel_map_entry *ct;
+	struct channel_handlers *ch;
+	struct channel_type_entry *ct;
 	struct open_channel_entry *ci;
 
 	sigar_t *sigar;
@@ -68,14 +68,14 @@ struct tlv_dispatcher *mettle_get_tlv_dispatcher(struct mettle *m)
 	return m->td;
 }
 
-struct channel_dispatcher_entry *mettle_get_channel_dispatcher(struct mettle *m)
+struct channel_handlers **mettle_get_channel_dispatcher(struct mettle *m)
 {
-	return m->cd;
+	return &(m->ch);
 }
 
-struct channel_map_entry *mettle_get_channel_types(struct mettle *m)
+struct channel_type_entry **mettle_get_channel_type_table(struct mettle *m)
 {
-	return m->ct;
+	return &(m->ct);
 }
 
 struct open_channel_entry **mettle_get_channel_instances(struct mettle *m)
@@ -156,14 +156,14 @@ struct mettle *mettle(void)
 		goto err;
 	}
 
-	m->cd = NULL;
+	m->ch = NULL;
 	m->ci = NULL;
 	m->ct = NULL;
 
 
 	tlv_register_coreapi(m, m->td);
 	tlv_register_stdapi(m, m->td);
-	tlv_register_default_channel_dispatchers(m, &(m->cd));
+	tlv_register_default_channel_dispatchers(m);
 
 	return m;
 

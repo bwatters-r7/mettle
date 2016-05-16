@@ -4,13 +4,11 @@
 #include "log.h"
 #include "uthash.h"
 
-int tlv_register_default_channel_dispatchers(struct mettle *m,
-		struct channel_dispatcher_entry **dispatch_table)
+int tlv_register_default_channel_dispatchers(struct mettle *m)
 {
 	log_debug("registering stdapi_fs_file_type in mettle object %p", m);
-	tlv_register_channel_dispatcher_str(m,
-			dispatch_table,
-			"stdapi_fs_file_type",
+	tlv_register_channel_handlers(m,
+			"stdapi_fs_file",
 			fs_file_initialize,
 			fs_file_read,
 			fs_file_write,
@@ -19,86 +17,60 @@ int tlv_register_default_channel_dispatchers(struct mettle *m,
 	return 0;
 }
 
-int tlv_register_channel_dispatcher_str(struct mettle *m,
-		struct channel_dispatcher_entry **dispatch_table,
-		char *str_type,
+struct channel_type_entry* tlv_register_channel_handlers(struct mettle *m,
+		char* str_type,
 		channel_initializer channel_initialize,
 		channel_handler channel_read,
 		channel_handler channel_write,
 		channel_handler channel_interact,
 		channel_handler channel_close)
 {
-	return tlv_register_channel_dispatcher(m,
-			dispatch_table,
-			get_int_channel_type(m, str_type),
-			channel_initialize,
-			channel_read,
-			channel_write,
-			channel_interact,
-			channel_close);
-}
-
-int tlv_register_channel_dispatcher(struct mettle *m,
-		struct channel_dispatcher_entry **dispatch_table,
-		uint32_t int_type,
-		channel_initializer channel_initialize,
-		channel_handler channel_read,
-		channel_handler channel_write,
-		channel_handler channel_interact,
-		channel_handler channel_close)
-{
-	struct channel_dispatcher_entry* entry;
-	HASH_FIND_INT(*dispatch_table, &int_type, entry);
-	if (entry != NULL){
-		log_debug("handlers already registered for %u type", int_type);
-		return 0;
-	}else{
-		log_debug("registering dispatchers for %u", int_type);
-		entry = calloc(1, sizeof(struct channel_dispatcher_entry));
-		entry->initialize=channel_initialize;
-		entry->int_type = int_type;
-		entry->read = channel_read;
-		entry->write = channel_write;
-		entry->interact = channel_interact;
-		entry->close = channel_close;
-		HASH_ADD_INT(*dispatch_table, int_type, entry);
-		log_debug("type %u registered in dispatch table", entry->int_type);
-		return 1;
-	}
-}
-
-uint32_t get_int_channel_type(struct mettle *m, const char* str_type)
-{
-	log_debug("in get_int_channel_type");
-	struct channel_map_entry *type_table = mettle_get_channel_types(m);
-	struct channel_map_entry *type_entry;
+	log_debug("tlv_register_channel_handlers");
 	log_debug("mettle address = %p", m);
-	log_debug("type table address = %p", type_table);
-	for(type_entry = type_table; type_entry != NULL; type_entry = type_entry->hh.next){
-		if (!strcmp(str_type, type_entry->str_type)){
-			log_debug("found entry for type %s:%u", type_entry->str_type, type_entry->int_type);
-					return type_entry->int_type;
-		}
-	}
+	struct channel_type_entry **type_table = mettle_get_channel_type_table(m);
+	struct channel_type_entry *type_entry = NULL;
+	struct channel_handlers *handler_entry;
 	/*
-	 * could not find the type; place it in the hash table
-	 * create the entry first, then add it.
+	 * try to find it
 	 */
-	log_debug("no entry for type %s", str_type);
-	struct channel_map_entry* new_entry = calloc(1, sizeof(struct channel_map_entry));
-	uint32_t str_len = strlen(str_type)+1;
-	new_entry->str_type = calloc(str_len, sizeof(char));
-	strncpy(new_entry->str_type, str_type, str_len);
-	for(uint32_t i = 1; i <= INT_MAX; i++){
-		HASH_FIND_INT(type_table, &i, type_entry);
-		if (type_entry == NULL){
-			new_entry->int_type = i;
-			HASH_ADD_INT(type_table, int_type, new_entry);
-			log_debug("added entry for type %s:%u", new_entry->str_type, new_entry->int_type);
-			break;
+	handler_entry = get_channel_handlers(m, str_type);
+	if (handler_entry == NULL){
+		uint32_t str_len = strlen(str_type)+1;
+		char* new_str = calloc(1, str_len);
+		handler_entry = calloc(1, sizeof(struct channel_handlers));
+		type_entry = calloc(1, sizeof(struct channel_type_entry));
+		strncpy(new_str, str_type, str_len);
+		/*
+		 * are all our structs valid?
+		 */
+		if ((new_str == NULL) ||
+				(handler_entry == NULL) ||
+				(type_entry == NULL)){
+			return NULL;
 		}
+		type_entry->handlers=handler_entry;
+		type_entry->str_type = new_str;
+		HASH_ADD_KEYPTR(hh, *type_table, type_entry->str_type, strlen(type_entry->str_type), type_entry);
 	}
-	return new_entry->int_type;
+	handler_entry->initialize = channel_initialize;
+	handler_entry->read = channel_read;
+	handler_entry->write = channel_write;
+	handler_entry->interact = channel_interact;
+	handler_entry->close = channel_close;
+	return type_entry;
+}
+
+
+struct channel_handlers* get_channel_handlers(struct mettle *m, const char* str_type)
+{
+	log_debug("in get_channel_handlers");
+	log_debug("looking for %s", str_type);
+	struct channel_type_entry **type_table = mettle_get_channel_type_table(m);
+	struct channel_type_entry *type_entry;
+	HASH_FIND_STR(*type_table, str_type, type_entry);
+	if (type_entry != NULL)
+		return type_entry->handlers;
+	return NULL;
 }
 
 int add_channel(struct mettle *m, struct open_channel_entry* channel_in)
@@ -133,7 +105,7 @@ int add_channel(struct mettle *m, struct open_channel_entry* channel_in)
 	return -1;
 }
 
-int get_channel_id(struct open_channel_entry* channel, uint32_t *channel_id)
+int get_channel_id(uint32_t *channel_id, struct open_channel_entry* channel)
 {
 	log_debug("in get_channel_id");
 	if (channel != NULL){
@@ -160,17 +132,26 @@ void set_channel_flags(struct tlv_handler_ctx *ctx, struct open_channel_entry* c
 
 }
 
-int set_channel_type(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+char* set_channel_type(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
 {
 	struct mettle *m = ctx->arg;
 	log_debug("setting channel type");
 	char *str_type = tlv_packet_get_str(ctx->req, TLV_TYPE_CHANNEL_TYPE);
+	char *new_str = NULL;
 	if (str_type == NULL){
-		log_debug("found type %s", str_type);
-		return -1;
+		log_debug("no type found");
+	}else{
+		uint32_t str_len = strlen(str_type)+1;
+		new_str = calloc(1, sizeof(str_len));
+		if (new_str != NULL)
+			strncpy(new_str, str_type, str_len);
 	}
-	channel->int_type = get_int_channel_type(m, str_type);
-	return 0;
+	channel->str_type = new_str;
+	channel->handlers = get_channel_handlers(m, new_str);
+	if (channel->handlers == NULL)
+		log_debug("no handlers found for type %s", new_str);
+
+	return new_str;
 }
 
 struct open_channel_entry* core_channel_new(struct tlv_handler_ctx *ctx)
@@ -192,7 +173,7 @@ struct open_channel_entry* core_channel_new(struct tlv_handler_ctx *ctx)
 	 * populate the channel_entry data
 	 */
 	set_channel_flags(ctx, channel);
-	if (set_channel_type(ctx, channel) == -1){
+	if (set_channel_type(ctx, channel) == NULL){
 		free(channel);
 		return NULL;
 	}
@@ -213,38 +194,38 @@ struct open_channel_entry* core_channel_new(struct tlv_handler_ctx *ctx)
 	 * call specific handler for completion
 	 * if it exists
 	 */
-	channel_dispatch_initialize(ctx, channel);
+	channel_type_initialize(ctx, channel);
 	return channel;
 }
 
-int channel_dispatch_initialize(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+int channel_type_initialize(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
 {
-	struct channel_dispatcher_entry* dispatch_entry = get_dispatch_data(ctx, channel);
-	if (dispatch_entry->initialize != NULL){
+	struct channel_handlers* handler_functions = channel->handlers;
+	if (handler_functions != NULL){
 		log_debug("specific initializer found");
-		return dispatch_entry->initialize(ctx, channel);
+		return handler_functions->initialize(ctx, channel);
 	}
 	log_debug("no specific initializer found");
 	return -1;
 }
 
-struct tlv_packet* channel_dispatch_read(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+struct tlv_packet* channel_type_read(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
 {
-	struct channel_dispatcher_entry* dispatch_entry = get_dispatch_data(ctx, channel);
-	if (dispatch_entry->read != NULL){
+	struct channel_handlers* handler_functions = channel->handlers;
+	if (handler_functions != NULL){
 		log_debug("specific read found");
-		return dispatch_entry->read(ctx, channel);
+		return handler_functions->read(ctx, channel);
 	}
 	log_debug("no specific read found");
 	return tlv_packet_response_result(ctx, TLV_RESULT_FAILURE);
 }
 
-struct tlv_packet* channel_dispatch_write(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+struct tlv_packet* channel_type_write(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
 {
-	struct channel_dispatcher_entry* dispatch_entry = get_dispatch_data(ctx, channel);
-	if (dispatch_entry->read != NULL){
+	struct channel_handlers* handler_functions = channel->handlers;
+	if (handler_functions != NULL){
 		log_debug("specific write found");
-		return dispatch_entry->write(ctx, channel);
+		return handler_functions->write(ctx, channel);
 	}
 	log_debug("no specific write found");
 	return tlv_packet_response_result(ctx, TLV_RESULT_FAILURE);
@@ -261,50 +242,6 @@ struct open_channel_entry* get_open_channel(struct tlv_handler_ctx *ctx, uint32_
 	log_debug("here");
 	HASH_FIND_INT(*channel_table, &channel_id, channel_entry);
 	return channel_entry;
-}
-struct channel_dispatcher_entry* get_dispatch_data(struct tlv_handler_ctx *ctx,
-		struct open_channel_entry *channel)
-{
-	struct mettle *m = ctx->arg;
-	log_debug("mettle address = %p", m);
-	struct channel_dispatcher_entry *dispatch_table = mettle_get_channel_dispatcher(m);
-	log_debug("dispatch table address = %p", dispatch_table);
-	struct channel_dispatcher_entry *dispatcher_entry;
-	HASH_FIND_INT(dispatch_table, &channel->int_type, dispatcher_entry);
-	return dispatcher_entry;
-}
-
-int print_channel_data(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
-{
-	struct channel_dispatcher_entry *dispatcher_entry = get_dispatch_data(ctx, channel);
-	log_debug("channel_id=%u", channel->channel_id);
-	if (dispatcher_entry->initialize == NULL)
-		log_debug("dispatcher_entry->initialize is NULL");
-	else
-		log_debug("dispatcher_entry->initialize is not NULL");
-	if (dispatcher_entry->read == NULL)
-		log_debug("dispatcher_entry->read is NULL");
-	else
-		log_debug("dispatcher_entry->read is not NULL");
-	if (dispatcher_entry->write == NULL)
-		log_debug("dispatcher_entry->write is NULL");
-	else
-		log_debug("dispatcher_entry->write is not NULL");
-	if (dispatcher_entry->close == NULL)
-		log_debug("dispatcher_entry->close is NULL");
-	else
-		log_debug("dispatcher_entry->close is NULL");
-	if (dispatcher_entry->interact == NULL)
-		log_debug("dispatcher_entry->interact is NULL");
-	else
-		log_debug("dispatcher_entry->interact is NULL");
-
-	log_debug("channel->flags=%u", channel->flags);
-	log_debug("channel->path=%s", channel->path);
-	log_debug("channel->state=%u", channel->state);
-	log_debug("channel->int_type=%u", channel->int_type);
-	return 0;
-
 }
 
 struct tlv_packet *request_general_channel_open(struct tlv_handler_ctx *ctx)

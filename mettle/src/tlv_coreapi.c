@@ -76,7 +76,7 @@ static struct tlv_packet *core_channel_open(struct tlv_handler_ctx *ctx)
 	struct tlv_packet *p;
 	struct open_channel_entry* channel = core_channel_new(ctx);
 	uint32_t channel_id = 0;
-	if (-1 == get_channel_id(channel, &channel_id)){
+	if (-1 == get_channel_id(&channel_id, channel)){
 		p = tlv_packet_response_result(ctx, TLV_RESULT_FAILURE);
 	}else{
 		log_debug("sending back channel_id %u", channel_id);
@@ -98,7 +98,7 @@ static struct tlv_packet *core_channel_read(struct tlv_handler_ctx *ctx)
 		log_debug("no channel found with id %u", channel_id);
 		return tlv_packet_response_result(ctx, TLV_RESULT_FAILURE);
 	}
-	return channel_dispatch_read(ctx, channel);
+	return channel_type_read(ctx, channel);
 
 }
 
@@ -115,7 +115,7 @@ static struct tlv_packet *core_channel_write(struct tlv_handler_ctx *ctx)
 		log_debug("no channel found with id %u", channel_id);
 		return tlv_packet_response_result(ctx, TLV_RESULT_FAILURE);
 	}
-	return channel_dispatch_write(ctx, channel);
+	return channel_type_write(ctx, channel);
 
 }
 
