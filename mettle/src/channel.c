@@ -4,13 +4,22 @@
 #include "log.h"
 #include "uthash.h"
 
+
+static int add_channel(struct mettle *m, struct open_channel_entry* channel_in);
+static int cleanup_channel(struct open_channel_entry* channel);
+static struct channel_type_entry* get_channel_type_entry(struct mettle *m, const char* str_type);
+static void set_channel_flags(struct tlv_handler_ctx *ctx, struct open_channel_entry* channel);
+static char* set_channel_type(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel);
+
+
+
 /*
  * adds the channel to the open channel hash table held by mettle
  * so it can be referenced by the channel_id
  * on success, returns 0
  * on error, returns -1
  */
-int add_channel(struct mettle *m, struct open_channel_entry* channel_in)
+static int add_channel(struct mettle *m, struct open_channel_entry* channel_in)
 {
 	/*
 	 * channel_id 0 used by framework for keep-alive messages
@@ -43,6 +52,22 @@ int add_channel(struct mettle *m, struct open_channel_entry* channel_in)
 }
 
 /*
+ * cleans up the malloc'd data in the channel, then deletes the
+ * channel
+ */
+static int cleanup_channel(struct open_channel_entry* channel)
+{
+	if (channel->data != NULL)
+		free(channel->data);
+	if (channel->path != NULL)
+		free(channel->path);
+	if (channel->str_type != NULL)
+		free(channel->str_type);
+	free(channel);
+	return 0;
+}
+
+/*
  * this is the constructor for the channel "class"
  * it creates the struct in memory and populates:
  * -channel type and str_type via set_channel_type()
@@ -68,7 +93,7 @@ struct open_channel_entry* core_channel_new(struct tlv_handler_ctx *ctx)
 	 */
 	set_channel_flags(ctx, channel);
 	if (set_channel_type(ctx, channel) == NULL){
-		free(channel);
+		cleanup_channel(channel);
 		return NULL;
 	}
 	channel->channel_id = 0;
@@ -81,31 +106,22 @@ struct open_channel_entry* core_channel_new(struct tlv_handler_ctx *ctx)
 		/*
 		 * failed to register channel; give up
 		 */
-		free(channel);
+		cleanup_channel(channel);
 		return NULL;
 	}
 	/*
 	 * call specific handler for completion
 	 * if it exists
 	 */
-	channel_type_initialize(ctx, channel);
+	if (-1 == channel_type_initialize(ctx, channel))
+	{
+		log_debug("channel-specific initialization failed");
+		return NULL;
+	}
 	return channel;
 }
 
-/*
- * gives access to the channel_handlers entry in the handlers table
- * for a given string type
- * on error, returns NULL
- */
-struct channel_handlers* get_channel_handlers(struct mettle *m, const char* str_type)
-{
-	log_debug("in get_channel_handlers");
-	log_debug("looking for %s", str_type);
-	struct channel_type_entry *type_entry = get_channel_type_entry(m, str_type);
-	if (type_entry == NULL)
-		return NULL;
-	return type_entry->handlers;
-}
+
 
 /*
  * gets the channel id for a given channel open_channel struct
@@ -129,9 +145,9 @@ int get_channel_id(uint32_t *channel_id, struct open_channel_entry* channel)
  * returns the type entry from the channel type table for a given channel type
  * on error, returns NULL
  */
-struct channel_type_entry* get_channel_type_entry(struct mettle *m, const char* str_type)
+static struct channel_type_entry* get_channel_type_entry(struct mettle *m, const char* str_type)
 {
-	log_debug("in get_channel_handlers");
+	log_debug("in get_channel_type_entry");
 	log_debug("looking for %s", str_type);
 	struct channel_type_entry **type_table = mettle_get_channel_type_table(m);
 	struct channel_type_entry *type_entry;
@@ -162,13 +178,19 @@ struct tlv_packet* channel_type_close(struct tlv_handler_ctx *ctx, struct open_c
  */
 int channel_type_initialize(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
 {
+	/*
+	 * we expect the initializer to return:
+	 * 1 on success
+	 * -1 on failure
+	 * this wrapper returns 0 if no handler is found
+	 */
 	struct channel_handlers* handler_functions = channel->type->handlers;
 	if (handler_functions != NULL){
 		log_debug("specific initializer found");
 		return handler_functions->initialize(ctx, channel);
 	}
 	log_debug("no specific initializer found");
-	return -1;
+	return 0;
 }
 
 /*
@@ -216,7 +238,10 @@ struct tlv_packet* channel_type_write(struct tlv_handler_ctx *ctx, struct open_c
 	return tlv_packet_response_result(ctx, TLV_RESULT_FAILURE);
 }
 
-
+/*
+ * retrieves a channel object from the channel table
+ * based on channel_id
+ */
 struct open_channel_entry* get_open_channel(struct tlv_handler_ctx *ctx, uint32_t channel_id)
 {
 	struct mettle *m = ctx->arg;
@@ -229,30 +254,24 @@ struct open_channel_entry* get_open_channel(struct tlv_handler_ctx *ctx, uint32_
 	return channel_entry;
 }
 
-struct tlv_packet *request_general_channel_open(struct tlv_handler_ctx *ctx)
-{
-	//struct channel_entry *channel=new_channel(ctx);
-	log_debug("here");
-	const char *extension = tlv_packet_get_str(ctx->req, TLV_TYPE_STRING);
-	if (extension == NULL) {
-		return NULL;
-	}
-	return tlv_packet_response_result(ctx, TLV_RESULT_SUCCESS);
-}
 
+/*
+ * removes the given channel from the open channels table
+ * and calls cleanup channel to delete channel data and
+ * the channel object
+ */
 int remove_channel(struct tlv_handler_ctx *ctx, struct open_channel_entry* channel)
 {
-	//free the calloc'd data, too!
 	struct mettle *m = ctx->arg;
 	struct open_channel_entry **channel_table = mettle_get_channel_instances(m);
 	struct open_channel_entry *delete_channel;
 	HASH_FIND_INT(*channel_table, &channel->channel_id, delete_channel);
 	if (delete_channel == NULL){
-		log_debug("no channel with channel_id %d found", channel->channel_id);
+		log_debug("no channel with channel_id %d found in open channels", channel->channel_id);
 		return -1;
 	}
 	HASH_DEL(*channel_table, channel);
-	free(channel);
+	cleanup_channel(channel);
 	log_debug("channel deleted");
 	return 0;
 }
@@ -343,7 +362,7 @@ int tlv_register_default_channel_dispatchers(struct mettle *m)
 /*
  * sets the channel flags in a given open channel object
  */
-void set_channel_flags(struct tlv_handler_ctx *ctx, struct open_channel_entry* channel)
+static void set_channel_flags(struct tlv_handler_ctx *ctx, struct open_channel_entry* channel)
 {
 	/*
 	 * if no channel flags are sent, we need to use 0, but if no
@@ -358,7 +377,7 @@ void set_channel_flags(struct tlv_handler_ctx *ctx, struct open_channel_entry* c
 }
 
 /*
- * sets two entries in the open channel entry:
+ * sets two elements in the open channel entry:
  * it always sets the string type value in the open channel
  * to match the new name
  * it sets the channel type entry to point to the proper entry
@@ -371,7 +390,7 @@ void set_channel_flags(struct tlv_handler_ctx *ctx, struct open_channel_entry* c
  * for the dispatcher to work properly, you must call
  * this function only after registering the type.
  */
-char* set_channel_type(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
+static char* set_channel_type(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
 {
 	struct mettle *m = ctx->arg;
 	log_debug("setting channel type");
@@ -391,3 +410,4 @@ char* set_channel_type(struct tlv_handler_ctx *ctx, struct open_channel_entry *c
 		log_debug("no handlers found for type %s", new_str);
 	return new_str;
 }
+

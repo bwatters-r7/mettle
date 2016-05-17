@@ -68,23 +68,22 @@ static struct tlv_packet *core_channel_eof(struct tlv_handler_ctx *ctx)
 		p = tlv_packet_response_result(ctx, TLV_RESULT_SUCCESS);
 	}
 	return p;
-
 }
+
 static struct tlv_packet *core_channel_open(struct tlv_handler_ctx *ctx)
 {
-	log_debug("here");
+	struct open_channel_entry *channel = core_channel_new(ctx);
+	if (channel == NULL)
+		return tlv_packet_response_result(ctx, TLV_RESULT_FAILURE);
 	struct tlv_packet *p;
-	struct open_channel_entry* channel = core_channel_new(ctx);
-	uint32_t channel_id = 0;
-	if (-1 == get_channel_id(&channel_id, channel)){
-		p = tlv_packet_response_result(ctx, TLV_RESULT_FAILURE);
-	}else{
-		log_debug("sending back channel_id %u", channel_id);
-		p = tlv_packet_response_result(ctx, TLV_RESULT_SUCCESS);
-		p = tlv_packet_add_u32(p, TLV_TYPE_CHANNEL_ID, channel_id);
-	}
+	uint32_t channel_id;
+	if (-1 == get_channel_id(&channel_id, channel))
+		return tlv_packet_response_result(ctx, TLV_RESULT_FAILURE);
+	p = tlv_packet_response_result(ctx, TLV_RESULT_SUCCESS);
+	p = tlv_packet_add_u32(p, channel_id, TLV_TYPE_CHANNEL_TYPE);
 	return p;
 }
+
 static struct tlv_packet *core_channel_read(struct tlv_handler_ctx *ctx)
 {
 	uint32_t channel_id = 0;

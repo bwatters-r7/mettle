@@ -317,8 +317,7 @@ int fs_file_initialize(struct tlv_handler_ctx *ctx, struct open_channel_entry *c
 	strncpy(channel->path, temp_path, buf_size);
 	log_debug("path in channel = %s", channel->path);
 	log_debug("path in packet = %s", temp_path);
-	return 0;
-
+	return 1;
 }
 
 struct tlv_packet * fs_file_interact(struct tlv_handler_ctx *ctx, struct open_channel_entry *channel)
