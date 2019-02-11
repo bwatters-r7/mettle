@@ -14,8 +14,11 @@
 #include "base64.h"
 #include "c2.h"
 #include "extensions.h"
+#include "json.h"
 #include "log.h"
 #include "mettle.h"
+#include "mettle_rpc.h"
+#include "network_server.h"
 #include "process.h"
 #include "tlv.h"
 
@@ -29,6 +32,10 @@ struct mettle {
 
 	struct c2 *c2;
 	struct tlv_dispatcher *td;
+
+	struct mettle_rpc *rpc;
+	char *rpc_addr;
+	uint16_t rpc_port;
 
 	sigar_t *sigar;
 	sigar_sys_info_t sysinfo;
@@ -108,7 +115,7 @@ const char *mettle_get_machine_id(struct mettle *m)
 	return m->sysinfo.uuid;
 }
 
-int mettle_set_uuid_base64(struct mettle *m, char *uuid_b64)
+int mettle_set_uuid_base64(struct mettle *m, const char *uuid_b64)
 {
 	char *uuid = calloc(1, strlen(uuid_b64));
 	if (uuid == NULL)
@@ -119,7 +126,7 @@ int mettle_set_uuid_base64(struct mettle *m, char *uuid_b64)
 	return 0;
 }
 
-int mettle_set_session_guid_base64(struct mettle *m, char *guid_b64)
+int mettle_set_session_guid_base64(struct mettle *m, const char *guid_b64)
 {
 	char *guid = calloc(1, strlen(guid_b64));
 	if (guid == NULL)
@@ -130,6 +137,17 @@ int mettle_set_session_guid_base64(struct mettle *m, char *guid_b64)
 	tlv_dispatcher_set_session_guid(m->td, guid);
 	free(guid);
 	return 0;
+}
+
+void mettle_set_rpc_info(struct mettle *m, const char *addr, uint16_t port)
+{
+	if (m->rpc_addr) {
+		free(m->rpc_addr);
+		m->rpc_addr = NULL;
+	}
+
+	m->rpc_addr = strdup(addr);
+	m->rpc_port = port;
 }
 
 struct tlv_dispatcher *mettle_get_tlv_dispatcher(struct mettle *m)
@@ -288,10 +306,12 @@ int mettle_start(struct mettle *m)
 	ev_signal_start(m->loop, &sigterm_w);
 
 	tlv_register_coreapi(m);
-
 	tlv_register_channelapi(m);
-
 	tlv_register_stdapi(m);
+
+	if (m->rpc_addr && m->rpc_port) {
+		m->rpc = mettle_rpc_new(m, m->rpc_addr, m->rpc_port);
+	}
 
 	c2_start(m->c2);
 

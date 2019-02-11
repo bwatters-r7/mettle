@@ -2,7 +2,7 @@
 
 #include "json.h"
 #include "log.h"
-#include "mettle.h"
+#include "mettle_rpc.h"
 #include "network_server.h"
 #include "utlist.h"
 
@@ -84,6 +84,7 @@ static void event_cb(struct bufferev *bev, int event, void *arg)
 {
 	struct mettle_rpc *mrpc = arg;
 
+	log_info("got connect");
 	if (event & (BEV_EOF|BEV_ERROR)) {
 		struct mettle_rpc_conn *conn = get_conn(mrpc, bev);
 		if (conn) {
@@ -107,7 +108,22 @@ void mettle_rpc_free(struct mettle_rpc *mrpc)
 	}
 }
 
-struct mettle_rpc * mettle_rpc_new(struct mettle *m)
+static json_object *handle_message(struct json_method_ctx *json_ctx, void *arg)
+{
+    struct mettle *m = arg;
+    const char *message, *level;
+    json_get_str(json_ctx->params, "message", &message);
+    json_get_str_def(json_ctx->params, "level", &level, "debug");
+    if (strcmp(level, "error") == 0) {
+        log_error("[%s] %s", level, message);
+    } else {
+        log_info("[%s] %s", level, message);
+    }
+    return NULL;
+}
+
+
+struct mettle_rpc * mettle_rpc_new(struct mettle *m, const char *addr, uint16_t port)
 {
 	struct mettle_rpc *mrpc = calloc(1, sizeof(*mrpc));
 	if (mrpc == NULL) {
@@ -121,13 +137,15 @@ struct mettle_rpc * mettle_rpc_new(struct mettle *m)
 		goto err;
 	}
 
+	json_rpc_register_method(mrpc->jrpc, "message", "message,level", handle_message, m);
+
 	mrpc->ns = network_server_new(mettle_get_loop(m));
-	char *host = "127.0.0.1";
-	uint16_t port = 1337;
-	if (network_server_listen_tcp(mrpc->ns, host, port) == -1) {
-		log_info("failed to listen on %s:%d", host, port);
+	if (network_server_listen_tcp(mrpc->ns, addr, port) == -1) {
+		log_info("failed to listen on %s:%d", addr, port);
 		goto err;
 	}
+
+	network_server_setcbs(mrpc->ns, read_cb, NULL, event_cb, mrpc);
 
 	return mrpc;
 

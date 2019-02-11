@@ -138,6 +138,9 @@ static int parse_cmdline(int argc, char * const argv[], struct mettle *m, int fl
 		case 'o':
 			out = optarg;
 			break;
+		case 'l':
+			mettle_set_rpc_info(m, "127.0.0.1", 1337);
+			break;
 		case 'h':
 		default:
 			usage("mettle");
@@ -154,13 +157,13 @@ static int parse_cmdline(int argc, char * const argv[], struct mettle *m, int fl
 		setproctitle(name);
 	}
 
+	if (debug) {
+		start_logger(out);
+	}
+
 	if (interactive) {
 		mettle_console_start_interactive(m);
 		return 0;
-	}
-
-	if (debug) {
-		start_logger(out);
 	}
 
 	if (background) {
