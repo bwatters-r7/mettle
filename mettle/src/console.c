@@ -129,7 +129,7 @@ static void set_prompt(const char *fmt, ...)
 	char *prompt = NULL;
 	va_list va;
 	va_start(va, fmt);
-	vasprintf(&prompt, fmt, va);
+	int x = vasprintf(&prompt, fmt, va);
 	va_end(va);
 
 	if (prompt) {
@@ -153,7 +153,7 @@ static void set_prompt(const char *fmt, ...)
 static void console_log(const char *prefix, const char *fmt, va_list va)
 {
 	char *msg = NULL;
-	vasprintf(&msg, fmt, va);
+	int x = vasprintf(&msg, fmt, va);
 
 	if (msg) {
 		pthread_mutex_lock(&console.mutex);

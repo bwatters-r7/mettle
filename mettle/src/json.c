@@ -7,6 +7,8 @@
 
 struct json_object *json_read_file(const char *filename)
 {
+  log_info("json_read_file");
+
 	struct json_object *obj = NULL;
 	FILE *file = fopen(filename, "r");
 	struct json_tokener *tok = json_tokener_new();
@@ -43,6 +45,7 @@ out:
 
 struct json_object * json_read_buf(const void *buf, ssize_t buf_len)
 {
+  log_info("json_read_buf");
 	struct json_tokener *tok = json_tokener_new();
 	struct json_object *obj = json_tokener_parse_ex(tok, buf, buf_len);
 	if (!obj) {
@@ -55,6 +58,7 @@ struct json_object * json_read_buf(const void *buf, ssize_t buf_len)
 
 struct json_object *json_read_bufferev(struct bufferev *bev, struct json_tokener *tok)
 {
+  log_info("json_read_bufferev");
 	char buf[4096];
 	size_t buf_len;
 	struct json_object *obj = NULL;
@@ -73,6 +77,7 @@ struct json_object *json_read_bufferev(struct bufferev *bev, struct json_tokener
 void json_read_bufferev_cb(struct bufferev *bev, struct json_tokener *tok,
 		json_read_cb cb, void *arg)
 {
+  log_info("json_read_bufferev_cb");
 	char buf[4096];
 	size_t buf_len, last_read = 0;
 	struct json_object *obj = NULL;
@@ -101,6 +106,7 @@ void json_read_bufferev_cb(struct bufferev *bev, struct json_tokener *tok,
 void json_read_buffer_queue_cb(struct buffer_queue *queue, struct json_tokener *tok,
 		json_read_cb cb, void *arg)
 {
+  log_info("json_read_buffer_queue_cb");
 	void *buf;
 	size_t buf_len, last_read = 0;
 	struct json_object *obj = NULL;
@@ -129,6 +135,7 @@ void json_read_buffer_queue_cb(struct buffer_queue *queue, struct json_tokener *
 
 int json_add_str(struct json_object *json, const char *key, const char *val)
 {
+  log_info("json_add_str");
 	if (val) {
 		struct json_object *obj = json_object_new_string(val);
 		if (obj) {
@@ -141,6 +148,7 @@ int json_add_str(struct json_object *json, const char *key, const char *val)
 
 int json_add_str_fmt(struct json_object *json, const char *key, const char *format, ...)
 {
+  log_info("json_add_str_fmt");
 	char *buf = NULL;
 	va_list args;
 	va_start(args, format);
@@ -156,6 +164,7 @@ int json_add_str_fmt(struct json_object *json, const char *key, const char *form
 
 int json_add_int32(struct json_object *json, const char *key, int32_t val)
 {
+  log_info("json_add_int32");
 	struct json_object *obj = json_object_new_int(val);
 	if (obj) {
 		json_object_object_add(json, key, obj);
@@ -166,6 +175,7 @@ int json_add_int32(struct json_object *json, const char *key, int32_t val)
 
 int json_add_int64(struct json_object *json, const char *key, int64_t val)
 {
+  log_info("json_add_int64");
 	struct json_object *obj = json_object_new_int64(val);
 	if (obj) {
 		json_object_object_add(json, key, obj);
@@ -176,6 +186,7 @@ int json_add_int64(struct json_object *json, const char *key, int64_t val)
 
 int json_add_double(struct json_object *json, const char *key, double val)
 {
+  log_info("json_add_double");
 	struct json_object *obj = json_object_new_double(val);
 	if (obj) {
 		json_object_object_add(json, key, obj);
@@ -186,6 +197,7 @@ int json_add_double(struct json_object *json, const char *key, double val)
 
 int json_add_bool(struct json_object *json, const char *key, bool val)
 {
+  log_info("json_add_bool");
 	struct json_object *obj = json_object_new_boolean(val);
 	if (obj) {
 		json_object_object_add(json, key, obj);
@@ -196,6 +208,7 @@ int json_add_bool(struct json_object *json, const char *key, bool val)
 
 int json_get_str(json_object *json, const char *key, const char **dst)
 {
+  log_info("json_get_str");
 	struct json_object *obj = json_object_object_get(json, key);
 	if (obj) {
 		*dst = json_object_get_string(obj);
@@ -205,6 +218,7 @@ int json_get_str(json_object *json, const char *key, const char **dst)
 
 int json_get_str_def(json_object *json, const char *key, const char **dst, const char *def)
 {
+  log_info("json_get_str_def");
 	struct json_object *obj = json_object_object_get(json, key);
 	if (obj) {
 		*dst = json_object_get_string(obj);
@@ -217,6 +231,7 @@ int json_get_str_def(json_object *json, const char *key, const char **dst, const
 
 int json_get_int32(json_object *json, const char *key, int32_t *dst)
 {
+  log_info("json_get_int32");
 	struct json_object *obj = json_object_object_get(json, key);
 	if (obj) {
 		*dst = json_object_get_int(obj);
@@ -229,6 +244,7 @@ int json_get_int32(json_object *json, const char *key, int32_t *dst)
 
 int json_get_int64(json_object *json, const char *key, int64_t *dst)
 {
+  log_info("json_get_int64");
 	struct json_object *obj = json_object_object_get(json, key);
 	if (obj) {
 		*dst = json_object_get_int64(obj);
@@ -241,6 +257,7 @@ int json_get_int64(json_object *json, const char *key, int64_t *dst)
 
 int json_get_double(json_object *json, const char *key, double *dst)
 {
+  log_info("json_get_double");
 	struct json_object *obj = json_object_object_get(json, key);
 	if (obj) {
 		*dst = json_object_get_double(obj);
@@ -253,6 +270,7 @@ int json_get_double(json_object *json, const char *key, double *dst)
 
 int json_get_bool(json_object *json, const char *key, bool *dst)
 {
+  log_info("json_get_bool");
 	struct json_object *obj = json_object_object_get(json, key);
 	if (obj) {
 		*dst = json_object_get_boolean(obj);
@@ -294,6 +312,7 @@ struct json_rpc * json_rpc_new(int flags)
 
 void json_rpc_free(struct json_rpc *jrpc)
 {
+  log_info("json_rpc_free");
 	if (jrpc) {
 		for (int i = 0; i < jrpc->num_methods; i++) {
 			free(jrpc->methods[i].params);
@@ -309,6 +328,8 @@ void json_rpc_free(struct json_rpc *jrpc)
 static struct json_method *find_method(struct json_rpc *jrpc,
 	const char *method_name)
 {
+  log_info("find_method");
+  log_info("method_name");
 	for (int i = 0; i < jrpc->num_methods; i++) {
 		if (strcmp(method_name, jrpc->methods[i].name) == 0) {
 			return &jrpc->methods[i];
@@ -320,6 +341,8 @@ static struct json_method *find_method(struct json_rpc *jrpc,
 int json_rpc_register_method(struct json_rpc *jrpc,
 	const char *method_name, const char *params, json_method_cb cb, void *arg)
 {
+  log_info("json_rpc_register_method");
+  log_info("method_name");
 	struct json_method *m = find_method(jrpc, method_name);
 	if (m || !cb) {
 		return -1;
@@ -349,6 +372,7 @@ int json_rpc_register_method(struct json_rpc *jrpc,
 static struct json_request * json_rpc_find_request(struct json_rpc *jrpc,
 	int64_t id)
 {
+  log_info("json_rpc_find_request");
 	if (jrpc->requests) {
 		struct json_request *r;
 		LL_FOREACH(jrpc->requests, r) {
@@ -363,6 +387,7 @@ static struct json_request * json_rpc_find_request(struct json_rpc *jrpc,
 int json_rpc_register_result_cb(struct json_rpc *jrpc,
 	int64_t id, json_result_cb cb, void *arg)
 {
+  log_info("json_rpc_register_result_cb");
 	struct json_request *r = json_rpc_find_request(jrpc, id);
 	if (r || cb == NULL) {
 		return -1;
@@ -379,6 +404,7 @@ int json_rpc_register_result_cb(struct json_rpc *jrpc,
 
 static bool is_jsonrpc(struct json_rpc *jrpc, struct json_object *json)
 {
+  log_info("is_jsonrpc");
 	const char *version;
 	return !(jrpc->flags & JSON_RPC_CHECK_VERSION) ||
 		(json_get_str(json, "jsonrpc", &version) == 0 && strcmp(version, "2.0") == 0);
@@ -386,6 +412,7 @@ static bool is_jsonrpc(struct json_rpc *jrpc, struct json_object *json)
 
 static struct json_object *json_rpc_obj_get(struct json_rpc *jrpc)
 {
+  log_info("json_rpc_obj_get");
 	struct json_object *obj = json_object_new_object();
 	if (obj && (jrpc->flags & JSON_RPC_CHECK_VERSION)) {
 		json_add_str(obj, "jsonrpc", "2.0");
@@ -396,6 +423,7 @@ static struct json_object *json_rpc_obj_get(struct json_rpc *jrpc)
 struct json_object * json_rpc_gen_error(struct json_rpc *jrpc,
 	struct json_object *id, int code, const char *message)
 {
+  log_info("json_rpc_gen_error");
 	struct json_object *obj = id ? json_rpc_obj_get(jrpc) : NULL;
 	if (obj) {
 		json_object_get(id);
@@ -411,6 +439,7 @@ struct json_object * json_rpc_gen_error(struct json_rpc *jrpc,
 struct json_object * json_rpc_gen_method_call(struct json_rpc *jrpc,
 	const char *method_name, int64_t *id, struct json_object *params)
 {
+  log_info("json_rpc_gen_method_call");
 	struct json_object *obj = json_rpc_obj_get(jrpc);
 	*id = jrpc->next_request_id++;
 	if (obj) {
@@ -426,6 +455,7 @@ struct json_object * json_rpc_gen_method_call(struct json_rpc *jrpc,
 struct json_object * json_rpc_gen_notification(struct json_rpc *jrpc,
 	const char *method_name, struct json_object *params)
 {
+  log_info("json_rpc_gen_notification");
 	struct json_object *obj = json_rpc_obj_get(jrpc);
 	if (obj) {
 		json_add_str(obj, "method", method_name);
@@ -439,6 +469,7 @@ struct json_object * json_rpc_gen_notification(struct json_rpc *jrpc,
 struct json_object * json_rpc_gen_result_json(struct json_rpc *jrpc,
 	struct json_object *id, json_object *result)
 {
+  log_info("json_rpc_gen_result_json");
 	struct json_object *obj = id ? json_rpc_obj_get(jrpc) : NULL;
 	if (obj) {
 		json_object_get(id);
@@ -451,6 +482,7 @@ struct json_object * json_rpc_gen_result_json(struct json_rpc *jrpc,
 struct json_object * json_rpc_gen_result_str(struct json_rpc *jrpc,
 	struct json_object *id, const char *result)
 {
+  log_info("json_rpc_gen_result_str");
 	struct json_object *obj = id ? json_rpc_obj_get(jrpc) : NULL;
 	if (obj) {
 		json_object_get(id);
@@ -463,6 +495,7 @@ struct json_object * json_rpc_gen_result_str(struct json_rpc *jrpc,
 struct json_object * json_rpc_gen_result_int32(struct json_rpc *jrpc,
     struct json_object *id, int32_t result)
 {
+  log_info("json_rpc_gen_result_int32");
     struct json_object *obj = id ? json_rpc_obj_get(jrpc) : NULL;
     if (obj) {
         json_object_get(id);
@@ -475,6 +508,7 @@ struct json_object * json_rpc_gen_result_int32(struct json_rpc *jrpc,
 struct json_object * json_rpc_gen_result_int64(struct json_rpc *jrpc,
     struct json_object *id, int64_t result)
 {
+  log_info("json_rpc_gen_result_int64");
     struct json_object *obj = id ? json_rpc_obj_get(jrpc) : NULL;
     if (obj) {
         json_object_get(id);
@@ -487,6 +521,7 @@ struct json_object * json_rpc_gen_result_int64(struct json_rpc *jrpc,
 struct json_object *json_rpc_process_single(
 	struct json_rpc *jrpc, struct json_object *json)
 {
+  log_info("json_rpc_process_single");
 	struct json_method_ctx ctx = {0};
 	ctx.id = json_object_object_get(json, "id");
 
@@ -564,6 +599,7 @@ struct json_object *json_rpc_process_single(
 struct json_object * json_rpc_process(struct json_rpc *jrpc,
 	struct json_object *json)
 {
+  log_info("json_rpc_process");
 	if (json_object_is_type(json, json_type_array)) {
 		int num_requests = json_object_array_length(json);
 		if (num_requests == 0) {
