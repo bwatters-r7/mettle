@@ -22,6 +22,7 @@ struct mettle_rpc {
 static struct mettle_rpc_conn * get_conn(struct mettle_rpc *mrpc,
 	struct bufferev *bev)
 {
+  log_info("get_conn");
 	struct mettle_rpc_conn *conn;
 	LL_FOREACH(mrpc->conns, conn) {
 		if (conn->bev == bev) {
@@ -48,6 +49,8 @@ static struct mettle_rpc_conn * get_conn(struct mettle_rpc *mrpc,
 
 static void handle_rpc(struct json_object *obj, void *arg)
 {
+  log_info("handle_rpc");
+
 	struct mettle_rpc_conn *conn = arg;
 
 	struct json_object *response = NULL;
@@ -71,6 +74,7 @@ static void handle_rpc(struct json_object *obj, void *arg)
 
 static void read_cb(struct bufferev *bev, void *arg)
 {
+  log_info("read_cb");
 	struct mettle_rpc *mrpc = arg;
 	struct mettle_rpc_conn *conn = get_conn(mrpc, bev);
 	if (conn) {
@@ -82,6 +86,7 @@ static void read_cb(struct bufferev *bev, void *arg)
 
 static void event_cb(struct bufferev *bev, int event, void *arg)
 {
+  log_info("event_cb");
 	struct mettle_rpc *mrpc = arg;
 
 	log_info("got connect");
@@ -97,6 +102,7 @@ static void event_cb(struct bufferev *bev, int event, void *arg)
 
 void mettle_rpc_free(struct mettle_rpc *mrpc)
 {
+  log_info("json_read_bufferev_cb");
 	if (mrpc) {
 		if (mrpc->jrpc) {
 			json_rpc_free(mrpc->jrpc);
@@ -110,6 +116,7 @@ void mettle_rpc_free(struct mettle_rpc *mrpc)
 
 static json_object *handle_message(struct json_method_ctx *json_ctx, void *arg)
 {
+    log_info("handle_message");
     struct mettle *m = arg;
     const char *message, *level;
     json_get_str(json_ctx->params, "message", &message);
@@ -125,6 +132,7 @@ static json_object *handle_message(struct json_method_ctx *json_ctx, void *arg)
 
 struct mettle_rpc * mettle_rpc_new(struct mettle *m, const char *addr, uint16_t port)
 {
+  log_info("mettle_rpc_new");
 	struct mettle_rpc *mrpc = calloc(1, sizeof(*mrpc));
 	if (mrpc == NULL) {
 		return NULL;

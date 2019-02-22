@@ -329,7 +329,7 @@ static struct json_method *find_method(struct json_rpc *jrpc,
 	const char *method_name)
 {
   log_info("find_method");
-  log_info("method_name");
+  log_info("method_name = %s", method_name);
 	for (int i = 0; i < jrpc->num_methods; i++) {
 		if (strcmp(method_name, jrpc->methods[i].name) == 0) {
 			return &jrpc->methods[i];
@@ -342,7 +342,7 @@ int json_rpc_register_method(struct json_rpc *jrpc,
 	const char *method_name, const char *params, json_method_cb cb, void *arg)
 {
   log_info("json_rpc_register_method");
-  log_info("method_name");
+  log_info("method_name = %s", method_name);
 	struct json_method *m = find_method(jrpc, method_name);
 	if (m || !cb) {
 		return -1;
