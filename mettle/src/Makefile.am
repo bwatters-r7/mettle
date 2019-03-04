@@ -31,6 +31,7 @@ libmettle_la_SOURCES += log.c
 libmettle_la_SOURCES += md5.c
 libmettle_la_SOURCES += module.c
 libmettle_la_SOURCES += mettle_rpc.c
+libmettle_la_SOURCES += mettle_pingback.c
 libmettle_la_SOURCES += network_client.c
 libmettle_la_SOURCES += network_server.c
 libmettle_la_SOURCES += ringbuf.c

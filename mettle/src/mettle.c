@@ -18,6 +18,7 @@
 #include "log.h"
 #include "mettle.h"
 #include "mettle_rpc.h"
+#include "mettle_pingback.h"
 #include "network_server.h"
 #include "process.h"
 #include "tlv.h"
@@ -36,6 +37,12 @@ struct mettle {
 	struct mettle_rpc *rpc;
 	char *rpc_addr;
 	uint16_t rpc_port;
+
+  //TODO
+  //Probably just an array/list of standard URIs would be better
+	struct mettle_pingback *pingback;
+	char *pingback_addr;
+	uint16_t pingback_port;
 
 	sigar_t *sigar;
 	sigar_sys_info_t sysinfo;
@@ -137,6 +144,17 @@ int mettle_set_session_guid_base64(struct mettle *m, const char *guid_b64)
 	tlv_dispatcher_set_session_guid(m->td, guid);
 	free(guid);
 	return 0;
+}
+
+void mettle_set_pingback_info(struct mettle *m, const char *addr, uint16_t port)
+{
+	if (m->pingback_addr) {
+		free(m->pingback_addr);
+		m->pingback_addr = NULL;
+	}
+
+	m->pingback_addr = strdup(addr);
+	m->pingback_port = port;
 }
 
 void mettle_set_rpc_info(struct mettle *m, const char *addr, uint16_t port)
@@ -311,6 +329,10 @@ int mettle_start(struct mettle *m)
 
 	if (m->rpc_addr && m->rpc_port) {
 		m->rpc = mettle_rpc_new(m, m->rpc_addr, m->rpc_port);
+	}
+
+	if (m->pingback_addr && m->pingback_port) {
+		m->pingback = mettle_pingback_new(m, m->pingback_addr, m->pingback_port);
 	}
 
 	c2_start(m->c2);

@@ -30,6 +30,7 @@ static void usage(const char *name)
 	printf("  -m, --modules <path>   add modules from path\n");
 	printf("  -n, --name <name>      name to start as\n");
 	printf("  -l, --listen\n");
+	printf("  -L, --pingback-listen\n");
 	printf("  -c, --console\n");
 	printf("\n");
 	exit(1);
@@ -62,11 +63,12 @@ static int parse_cmdline(int argc, char * const argv[], struct mettle *m, int fl
 		{"persist", required_argument, NULL, 'p'},
 		{"name", required_argument, NULL, 'n'},
 		{"listen", required_argument, NULL, 'l'},
+		{"pingback-listen", required_argument, NULL, 'L'},
 		{"console", no_argument, NULL, 'c'},
 		{"modules", required_argument, NULL, 'm'},
 		{ 0, 0, NULL, 0 }
 	};
-	const char *short_options = "hu:U:G:d:o:b:p:n:lcm:";
+	const char *short_options = "hu:U:G:d:o:b:p:n:lLcm:";
 	const char *out = NULL;
 	char *name = strdup("mettle");
 	bool name_flag = false;
@@ -140,6 +142,9 @@ static int parse_cmdline(int argc, char * const argv[], struct mettle *m, int fl
 			break;
 		case 'l':
 			mettle_set_rpc_info(m, "127.0.0.1", 1337);
+			break;
+		case 'L':
+			mettle_set_pingback_info(m, "127.0.0.1", 5309);
 			break;
 		case 'h':
 		default:

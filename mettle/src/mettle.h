@@ -27,6 +27,8 @@ int mettle_set_uuid_base64(struct mettle *m, const char *uuid_b64);
 
 int mettle_set_session_guid_base64(struct mettle *m, const char *uuid_b64);
 
+void mettle_set_pingback_info(struct mettle *m, const char *addr, uint16_t port);
+
 void mettle_set_rpc_info(struct mettle *m, const char *addr, uint16_t port);
 
 sigar_t *mettle_get_sigar(struct mettle *m);
